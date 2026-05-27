@@ -1,0 +1,109 @@
+#---------------------------------- Lattice Planner 参数 ----------------------------------------#
+# 修改此文件无需重新编译，直接 ros2 launch 即可生效
+
+# 基础配置
+FLAGS_vehicle_width: 1.6
+FLAGS_vehicle_length: 3.0
+front_edge_to_center: 2.0
+back_edge_to_center: 1.0
+FLAGS_default_reference_line_width: 4.0
+
+# 轨迹时间/空间参数
+FLAGS_trajectory_time_length: 8.0
+FLAGS_trajectory_time_resolution: 0.1
+FLAGS_trajectory_space_resolution: 0.4
+FLAGS_polynomial_minimal_param: 0.01
+
+# 速度规划
+FLAGS_num_velocity_sample: 6
+FLAGS_min_velocity_sample_gap: 1.0
+
+# 约束参数
+FLAGS_speed_lower_bound: -0.1
+FLAGS_speed_upper_bound: 40
+FLAGS_longitudinal_acceleration_lower_bound: -4.0
+FLAGS_longitudinal_acceleration_upper_bound: 2.0
+FLAGS_comfort_acceleration_factor: 0.5
+FLAGS_longitudinal_jerk_lower_bound: -4.0
+FLAGS_longitudinal_jerk_upper_bound: 4.0
+FLAGS_kappa_bound: 2.0
+FLAGS_lateral_acceleration_bound: 10.0
+
+# 代价权重
+FLAGS_weight_target_speed: 1.0
+FLAGS_weight_dist_travelled: 10.0
+FLAGS_weight_lon_objective: 10.0
+FLAGS_weight_lon_jerk: 1.0
+FLAGS_weight_lon_collision: 5.0
+FLAGS_weight_centripetal_acceleration: 1.0
+FLAGS_weight_lat_offset: 0.3
+FLAGS_weight_lat_comfort: 2.0
+
+# 纵向评价视界（需大于横向终点 s 值，确保轨迹簇可见）
+FLAGS_speed_lon_decision_horizon: 250
+
+# 纵向碰撞代价
+FLAGS_lon_collision_cost_std: 0.5
+FLAGS_lon_collision_yield_buffer: 1.0
+FLAGS_lon_collision_overtake_buffer: 5.0
+
+# 碰撞缓冲区
+FLAGS_lon_collision_buffer: 2.0
+FLAGS_lat_collision_buffer: 0.3
+FLAGS_lattice_stop_buffer: 0.2
+
+# 数值计算
+FLAGS_numerical_epsilon: 0.0000001
+FLAGS_bound_buffer: 0.2
+FLAGS_nudge_buffer: 0.6
+
+# ST 图 / 障碍物采样
+FLAGS_default_lon_buffer: 5.0
+FLAGS_time_min_density: 1.0
+FLAGS_num_sample_follow_per_timestamp: 3
+FLAGS_prediction_total_time: 5.0
+eval_time_interval: 0.1
+
+#---------------------------------- 模式特定横向采样参数 ----------------------------------------#
+# LCC (车道保持)
+LCC_end_d_candidates: [-0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3]
+LCC_smin_multiplier: 4.0
+LCC_end_s_deltas: [5.0, 10.0, 15.0, 20.0, 30.0]
+
+# ALC (自主变道)
+# end_d = target * fraction, end_s = speed * time (时间制, 任意速度下恒定)
+ALC_end_d_fractions: [1.0, 0.85, 0.6, 0.0]
+ALC_end_s_times: [7.5, 7.8, 8.2, 8.6]
+
+# NUDGE (障碍物绕行)
+NUDGE_end_d_candidates: [-2.5, -2.0, -0.65, -0.6, -0.5, 0.0, 0.5, 0.6, 0.65, 2.0, 2.5]
+NUDGE_kinematic_smin_multiplier: 1.8
+NUDGE_safe_smin_min: 20.0
+NUDGE_safe_smin_offset: -10.0
+NUDGE_end_s_deltas: [0.0, 10.0, 15.0, 20.0, 30.0]
+
+#---------------------------------- 模式特定评价权重 ----------------------------------------#
+# LCC (车道保持): 强居中
+LCC_w_lat_offset: 8.0
+LCC_w_opposite_side: 8.0
+LCC_w_same_side: 1.0
+LCC_w_lat_comfort: 2.0
+LCC_w_lat_offset_bound: 0.3
+
+# ALC (自主变道): 极强拉到目标车道 + 超调惩罚
+ALC_w_lat_offset: 10.0
+ALC_w_opposite_side: 1.0
+ALC_w_same_side: 1.0
+ALC_w_lat_comfort: 1.0
+ALC_w_lat_offset_bound: 3.75
+ALC_overshoot_penalty: 100.0
+
+# NUDGE (障碍物绕行): 对称权重 + 宽边界
+NUDGE_w_lat_offset: 2.0
+NUDGE_w_opposite_side: 1.0
+NUDGE_w_same_side: 1.0
+NUDGE_w_lat_comfort: 1.0
+NUDGE_w_lat_offset_bound: 0.65
+
+# 横向偏好 tiebreaker (跨目标线的额外代价)
+preferred_lat_sign_tiebreaker: 3.0

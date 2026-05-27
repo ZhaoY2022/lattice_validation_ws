@@ -1,0 +1,166 @@
+/******************************************************************************
+ * Copyright 2019 The Apollo Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *****************************************************************************/
+
+/**
+ * @file
+ * Modified function input and used only some functions
+ **/
+#include "math_utils.h"
+#include <cmath>
+#include <utility>
+
+namespace common
+{
+  namespace math
+  {
+    double Sigmoid(const double x)
+    {
+      return 1.0 / (1.0 + std::exp(-x));
+    }
+
+    double NormalizeAngle(const double angle)
+    {
+      double a = std::fmod(angle + M_PI, 2.0 * M_PI);
+      if (a < 0.0)
+      {
+        a += (2.0 * M_PI);
+      }
+      return a - M_PI;
+    }
+
+    double CrossProd(const Vec2d &start_point, const Vec2d &end_point_1, const Vec2d &end_point_2)
+    {
+      return (end_point_1 - start_point).CrossProdVec(end_point_2 - start_point);
+    }
+
+    double WrapAngle(const double angle)
+    {
+      const double new_angle = std::fmod(angle, M_PI * 2.0);
+      return new_angle < 0 ? new_angle + M_PI * 2.0 : new_angle;
+    }
+
+    std::pair<double, double> Cartesian2Polar(double x, double y)
+    {
+      double r = std::sqrt(x * x + y * y);
+      double theta = std::atan2(y, x);
+      return std::make_pair(r, theta);
+    }
+
+    double slerp(const double a0, const double t0, const double a1, const double t1, const double t)
+    {
+      if (std::abs(t1 - t0) <= 1e-10)
+      {
+        //  std::cout<<"input time difference is too small!"<<"\n";
+
+        return NormalizeAngle(a0);
+      }
+      const double a0_n = NormalizeAngle(a0);
+      const double a1_n = NormalizeAngle(a1);
+      double d = a1_n - a0_n;
+      if (d > M_PI)
+      {
+        d = d - 2 * M_PI;
+      }
+      else if (d < -M_PI)
+      {
+        d = d + 2 * M_PI;
+      }
+
+      const double r = (t - t0) / (t1 - t0);
+      const double a = a0_n + d * r;
+      return NormalizeAngle(a);
+    }
+
+    SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0, const SLPoint &p1, const double w)
+    {
+      // CHECK_GE(w, 0.0);
+
+      SLPoint p;
+      p.set_s((1 - w) * p0.s + w * p1.s);
+      p.set_l((1 - w) * p0.l + w * p1.l);
+      return p;
+    }
+
+    PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0, const PathPoint &p1, const double s)
+    {
+      double s0 = p0.s;
+      double s1 = p1.s;
+
+      PathPoint path_point;
+      double weight = (s - s0) / (s1 - s0);
+      double x = (1 - weight) * p0.x + weight * p1.x;
+      double y = (1 - weight) * p0.y + weight * p1.y;
+      double theta = common::math::slerp(p0.theta, p0.s, p1.theta, p1.s, s);
+      double kappa = (1 - weight) * p0.kappa + weight * p1.kappa;
+      double dkappa = (1 - weight) * p0.dkappa + weight * p1.dkappa;
+      path_point.set_x(x);
+      path_point.set_y(y);
+      path_point.set_theta(theta);
+      path_point.set_kappa(kappa);
+      path_point.set_dkappa(dkappa);
+      path_point.set_s(s);
+      return path_point;
+    }
+
+    TrajectoryPoint InterpolateUsingLinearApproximation(const TrajectoryPoint &tp0, const TrajectoryPoint &tp1,
+                                                        const double t)
+    {
+      double t0 = tp0.relative_time;
+      double t1 = tp1.relative_time;
+
+      TrajectoryPoint tp;
+      tp.set_v(common::math::lerp(tp0.v, t0, tp1.v, t1, t));
+      tp.set_a(common::math::lerp(tp0.a, t0, tp1.a, t1, t));
+      tp.set_relative_time(t);
+
+      if (!tp0.has_path_point() || !tp1.has_path_point())
+      {
+        // Fallback: use direct TrajectoryPoint fields when path_point not set
+        tp.set_x(common::math::lerp(tp0.x, t0, tp1.x, t1, t));
+        tp.set_y(common::math::lerp(tp0.y, t0, tp1.y, t1, t));
+        tp.set_theta(common::math::slerp(tp0.theta, t0, tp1.theta, t1, t));
+        tp.set_kappa(common::math::lerp(tp0.kappa, t0, tp1.kappa, t1, t));
+        tp.set_dkappa(common::math::lerp(tp0.dkappa, t0, tp1.dkappa, t1, t));
+        tp.set_s(common::math::lerp(tp0.s, t0, tp1.s, t1, t));
+        // Also interpolate Frenet frame fields
+        tp.d    = common::math::lerp(tp0.d,    t0, tp1.d,    t1, t);
+        tp.d_d  = common::math::lerp(tp0.d_d,  t0, tp1.d_d,  t1, t);
+        tp.d_dd = common::math::lerp(tp0.d_dd, t0, tp1.d_dd, t1, t);
+        tp.s_d  = common::math::lerp(tp0.s_d,  t0, tp1.s_d,  t1, t);
+        tp.s_dd = common::math::lerp(tp0.s_dd, t0, tp1.s_dd, t1, t);
+      }
+      else
+      {
+        const PathPoint pp0 = tp0.path_point();
+        const PathPoint pp1 = tp1.path_point();
+        tp.set_x(common::math::lerp(pp0.x, t0, pp1.x, t1, t));
+        tp.set_y(common::math::lerp(pp0.y, t0, pp1.y, t1, t));
+        tp.set_theta(common::math::slerp(pp0.theta, t0, pp1.theta, t1, t));
+        tp.set_kappa(common::math::lerp(pp0.kappa, t0, pp1.kappa, t1, t));
+        tp.set_dkappa(common::math::lerp(pp0.dkappa, t0, pp1.dkappa, t1, t));
+        tp.set_s(common::math::lerp(pp0.s, t0, pp1.s, t1, t));
+        // Interpolate Frenet frame fields (not stored in PathPoint)
+        tp.d    = common::math::lerp(tp0.d,    t0, tp1.d,    t1, t);
+        tp.d_d  = common::math::lerp(tp0.d_d,  t0, tp1.d_d,  t1, t);
+        tp.d_dd = common::math::lerp(tp0.d_dd, t0, tp1.d_dd, t1, t);
+        tp.s_d  = common::math::lerp(tp0.s_d,  t0, tp1.s_d,  t1, t);
+        tp.s_dd = common::math::lerp(tp0.s_dd, t0, tp1.s_dd, t1, t);
+      }
+
+      return tp;
+    }
+  } // namespace math
+} // namespace common

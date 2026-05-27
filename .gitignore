@@ -1,0 +1,20 @@
+# Build artifacts
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# Logs and temp files
+/tmp/
+*.log
+
+# Core dumps
+core
