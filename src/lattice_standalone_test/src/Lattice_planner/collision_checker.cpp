@@ -49,8 +49,10 @@ bool CollisionChecker::InCollision(const DiscretizedTrajectory &discretized_traj
   {
     const auto &trajectory_point = discretized_trajectory.TrajectoryPointAt(static_cast<std::uint32_t>(i));
     double ego_theta = trajectory_point.theta;
+    //1.以轨迹点(x,y)为基准，创建车辆原始OBB包围盒
     Box2d ego_box({trajectory_point.x, trajectory_point.y}, ego_theta, ego_length, ego_width);
-
+    
+    //2.车身几何中心偏移修正：轨迹点是后轴/车尾基准点，需要偏移到车身几何中心
     double shift_distance = ego_length / 2.0 - Config_.back_edge_to_center; //几何中心-车辆中心
     Vec2d shift_vec{shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)};
     ego_box.Shift(shift_vec);

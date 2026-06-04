@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Fast-DDS profile: disable shared memory (SHM) transport.
+     ROS2 Humble Fast-DDS creates /dev/shm/fastrtps_* files that can
+     linger across runs, causing RViz flickering, trajectory ghosting,
+     and obstacle afterimages. This profile restricts transport to UDPv4
+     on localhost only, preventing SHM residue entirely. -->
+<profiles>
+  <transport_descriptors>
+    <transport_descriptor>
+      <transport_id>udp_only_transport</transport_id>
+      <type>UDPv4</type>
+    </transport_descriptor>
+  </transport_descriptors>
+
+  <participant profile_name="no_shm_transport" is_default_profile="true">
+    <rtps>
+      <userTransports>
+        <transport_id>udp_only_transport</transport_id>
+      </userTransports>
+      <useBuiltinTransports>false</useBuiltinTransports>
+    </rtps>
+  </participant>
+</profiles>

@@ -33,7 +33,7 @@ namespace
 
 ConstraintChecker::Result ConstraintChecker::ValidTrajectory(const DiscretizedTrajectory &trajectory)
 {
-  const double kMaxCheckRelativeTime = Config_.FLAGS_trajectory_time_length;
+  const double kMaxCheckRelativeTime = Config_.FLAGS_trajectory_time_length; // 8s
   for (const auto &p : trajectory)
   {
     double t = p.relative_time;
@@ -42,7 +42,7 @@ ConstraintChecker::Result ConstraintChecker::ValidTrajectory(const DiscretizedTr
       break;
     }
     double lon_v = p.v;
-    if (!WithinRange(lon_v, Config_.FLAGS_speed_lower_bound, Config_.FLAGS_speed_upper_bound))
+    if (!WithinRange(lon_v, Config_.FLAGS_speed_lower_bound, Config_.FLAGS_speed_upper_bound)) // -0.1 110
     {
       // std::cout << "Velocity at relative time " << t << " exceeds bound, value: " << lon_v << ", bound ["
       //           << FLAGS_speed_lower_bound << ", " << FLAGS_speed_upper_bound << "]."
@@ -50,7 +50,7 @@ ConstraintChecker::Result ConstraintChecker::ValidTrajectory(const DiscretizedTr
       return Result::LON_VELOCITY_OUT_OF_BOUND;
     }
 
-    double lon_a = p.a;
+    double lon_a = p.a; // -4 2
     if (!WithinRange(lon_a, Config_.FLAGS_longitudinal_acceleration_lower_bound, Config_.FLAGS_longitudinal_acceleration_upper_bound))
     {
       // std::cout << "Longitudinal acceleration at relative time " << t << " exceeds bound, value: " << lon_a
@@ -61,7 +61,7 @@ ConstraintChecker::Result ConstraintChecker::ValidTrajectory(const DiscretizedTr
     }
 
     double kappa = p.kappa;
-    if (!WithinRange(kappa, -Config_.FLAGS_kappa_bound, Config_.FLAGS_kappa_bound))
+    if (!WithinRange(kappa, -Config_.FLAGS_kappa_bound, Config_.FLAGS_kappa_bound)) // 2
     {
       // std::cout << "Kappa at relative time " << t << " exceeds bound, value: " << kappa << ", bound ["
       //           << -Config_.FLAGS_kappa_bound << ", " << Config_.FLAGS_kappa_bound << "]."
@@ -86,7 +86,7 @@ ConstraintChecker::Result ConstraintChecker::ValidTrajectory(const DiscretizedTr
     double dt = p1.relative_time - p0.relative_time;
     double d_lon_a = p1.a - p0.a;
     double lon_jerk = d_lon_a / dt;
-    if (!WithinRange(lon_jerk, Config_.FLAGS_longitudinal_jerk_lower_bound, Config_.FLAGS_longitudinal_jerk_upper_bound))
+    if (!WithinRange(lon_jerk, Config_.FLAGS_longitudinal_jerk_lower_bound, Config_.FLAGS_longitudinal_jerk_upper_bound)) // -4 4
     {
       // std::cout << "Longitudinal jerk at relative time " << t << " exceeds bound, value: " << lon_jerk << ", bound ["
       //           << Config_.FLAGS_longitudinal_jerk_lower_bound << ", " << Config_.FLAGS_longitudinal_jerk_upper_bound << "].";
@@ -94,14 +94,14 @@ ConstraintChecker::Result ConstraintChecker::ValidTrajectory(const DiscretizedTr
     }
 
     double lat_a = p1.v * p1.v * p1.kappa;
-    if (!WithinRange(lat_a, -Config_.FLAGS_lateral_acceleration_bound, Config_.FLAGS_lateral_acceleration_bound))
+    if (!WithinRange(lat_a, -Config_.FLAGS_lateral_acceleration_bound, Config_.FLAGS_lateral_acceleration_bound)) // 10
     {
       // std::cout << "Lateral acceleration at relative time " << t << " exceeds bound, value: " << lat_a << ",bound["
       //           << -FLAGS_lateral_acceleration_bound << ", " << FLAGS_lateral_acceleration_bound << "].";
       return Result::LAT_ACCELERATION_OUT_OF_BOUND;
     }
 
-    // TODO(zhangyajia): this is temporarily disabled
+    // this is temporarily disabled
     // due to low quality reference line.
     /*
         double d_lat_a = p1.v * p1.v * p1.kappa - p0.v * p0.v * p0.kappa;

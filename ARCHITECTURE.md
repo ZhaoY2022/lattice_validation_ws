@@ -12,6 +12,12 @@
 
 ```
 lattice_validation_ws/
+├── src/pnc_msg/                         # 控制接口消息定义
+│   ├── msg/
+│   │   ├── TrajectoryPoint.msg          # 单轨迹点（13 字段）
+│   │   └── TrajPoints.msg               # 轨迹消息（header + flags + 40点数组）
+│   ├── CMakeLists.txt
+│   └── package.xml
 ├── src/lattice_standalone_test/
 │   ├── config/configs.yaml              # 所有可调参数（无需重编译）
 │   ├── include/Lattice_planner/         # 14 个头文件
@@ -28,16 +34,29 @@ lattice_validation_ws/
 │   │   ├── PlanningTarget.h             # 规划目标定义
 │   │   └── lattice_trajectory1d.h       # 1D 轨迹容器（外推处理）
 │   ├── include/Polynomial/              # 多项式曲线
-│   │   ├── curve1d.h                    # 基类
-│   │   ├── quintic_polynomial_curve1d.h # 五次多项式（横向）
-│   │   └── quartic_polynomial_curve1d.h # 四次多项式（巡航纵向）
 │   ├── include/Frenet/                  # Cartesian ↔ Frenet 转换
 │   ├── include/ReferenceLine/           # 参考线点（含 kappa/dkappa）
 │   ├── include/Obstacle/                # 障碍物模型
 │   ├── include/path/                    # 轨迹点数据结构
 │   ├── include/common/                  # Vec2d, Box2d, Configs 等
-│   └── src/                             # 与 include/ 镜像的 .cpp 文件
-│       └── lattice_test_node.cpp        # ROS2 仿真节点
+│   ├── src/                             # 与 include/ 镜像的 .cpp 文件
+│   │   ├── lattice_test_node.cpp        # ROS2 规划节点
+│   │   ├── lattice_simulator_node.cpp   # ROS2 仿真节点（独立）
+│   │   └── scenario_manager.cpp         # 场景管理器（共用库）
+│   ├── launch/run_scenario.launch.py    # 启动文件（5 进程）
+│   ├── rviz/lattice_test.rviz           # RViz2 配置
+│   └── urdf/lattice_car.urdf            # 车辆 3D 模型
+```
+
+**运行时架构** — 5 个独立进程：
+
+```
+run_scenario.launch.py
+├── lattice_test_node         (10Hz)  规划器 — LatticePlan + 可视化发布
+├── lattice_simulator_node   (100Hz) 仿真器 — TF 广播 map→base_footprint, 增量运动
+├── robot_state_publisher     (—)    URDF RobotModel 发布
+├── joint_state_publisher     (—)    关节状态发布
+└── rviz2                     (30fps) 可视化
 ```
 
 ---
@@ -268,15 +287,18 @@ wᵢ = w_opposite_side   if devᵢ × dev_start < 0  (跨目标线)
 2. **时间制 end_s**: `speed × {7.5, 7.8, 8.2, 8.6}s` — 任意速度下换道时间恒定
 3. **超调惩罚 ×100**: `deviation × target > 0` 时触发，五次多项式中间振荡被压制在 ≤0.05m
 4. **单点修改**: 只需改 `set_target_lat_offset(X)`，所有候选自动按比例适配
+5. **换道完成状态机**（`lattice_test_node.cpp`）: 当 `|d0 - target_d| < 0.20m` 且 `|heading_error| < 0.03 rad` 连续 5 帧成立时：(a) 整条 `reference_line_` 平移 `target_d` 到目标车道；(b) `alc_completed_flag_` 守卫使后续帧不再设定偏距；(c) `driving_mode` 切回 LCC，LCC 的强居中权重 (`w_lat_offset=8.0, bound=0.3`) 维持车辆在目标车道中心。航向误差通过 `PathMatcher::MatchToPath(s0, reference_line_)` 获取参考线匹配点航向计算
 
 ---
 
-## 7. 仿真节点 — 数据流
+## 7. 运行时数据流
+
+### 7.1 规划器节点 (lattice_test_node, 10Hz)
 
 ```
 lattice_test_node.cpp (timer_callback, 100ms)
     │
-    ├─ 更新自车状态 (x, y, theta, v)
+    ├─ 从 TF (map→base_footprint) 获取自车位姿
     ├─ 构建障碍物列表 (Obstacle 对象)
     ├─ 设置 PlanningTarget (巡航速度, 目标偏移)
     │
@@ -288,9 +310,37 @@ lattice_test_node.cpp (timer_callback, 100ms)
     │   ├─ [输出] DiscretizedTrajectory (最优轨迹)
     │   └─ [输出] all_trajectories (所有候选, 用于 RViz 可视化)
     │
-    ├─ 提取 trajectory[1] → 更新 vehicle_state_
-    ├─ 发布 RViz MarkerArray (参考线/最优/候选/障碍物/自车)
-    └─ 写入 CSV 日志 (/tmp/lattice_trajectory_log_*.csv)
+    ├─ 发布 /lattice_trajectory (40点重采样, 绝对时间, curvature/pinch/jerk)
+    ├─ 发布 RViz 可视化:
+    │   ├─ 道路边界 (一次性 /lattice_test/road_boundaries, frame_locked)
+    │   ├─ 参考路径 (一次性 /lattice_test/reference_path, transient_local)
+    │   ├─ 最优轨迹 Path (每帧 /lattice_test/optimal_trajectory)
+    │   ├─ MarkerArray (每帧 /lattice_test/viz_markers):
+    │   │   ├─ 障碍物 CUBE (含 DELETE 旧ID)
+    │   │   ├─ 参考线 LINE_STRIP (仅 frame 0, frame_locked)
+    │   │   ├─ 候选轨迹 LINE_STRIP (最多 25)
+    │   │   ├─ 最优轨迹 LINE_STRIP (从 timestep_ 开始)
+    │   │   └─ persist_history=true 时追加历史快照
+    │   └─ frame 0 各 namespace DELETEALL 清除残留
+    └─ 写入 CSV 日志 (/tmp/lattice_log_*.csv)
+```
+
+### 7.2 仿真器节点 (lattice_simulator_node, 100Hz)
+
+```
+lattice_simulator_node.cpp (timer_callback, 10ms)
+    │
+    ├─ 订阅 /lattice_trajectory (TrajPoints)
+    ├─ 首条轨迹到达前 freeze（first_traj_received_=false）
+    ├─ 首条轨迹位置校验：偏离 init >50m 则拒绝（DDS 残留）
+    ├─ 基于 wall-clock 的时间同步:
+    │   traj_t0_ = pts[0].time (绝对 planner 时间)
+    │   target_time = traj_t0_ + (wall_now - traj_arrival_time_)
+    │   → 规划器与仿真器均按 1.0 sim-s / wall-s 推进
+    ├─ 100% 轨迹查表: 在 trajectory_points 中二分查找 target_time
+    │   线性插值 x, y, heading, speed（无积分混合）
+    ├─ 广播 TF: map → base_footprint
+    └─ 跑满场景后自动退出
 ```
 
 ---
@@ -308,3 +358,20 @@ lattice_test_node.cpp (timer_callback, 100ms)
 7. **条件化状态继承**: 仅在 NUDGE 模式下继承上一周期 d0，其他模式自然收敛
 8. **NUDGE 动态 smin**: 基于障碍物实际距离计算，参数在 YAML 中可配
 9. **约束放宽**: 速度/加速度/加加速度约束从城市道路值放宽到高速公路值 (22 m/s)
+11. **RViz2 黄色警告修复**: (a) 删除无障碍物时的零尺寸退化 CUBE 标记；(b) 所有动态标记 lifetime 延长至 1.0-2.0s；(c) Frame 0 发送 DELETEALL 清除残留
+12. **历史轨迹持久化**: 新增 `persist_history` 参数，开启后生成 lifetime=∞ 的历史快照，运行结束后轨迹永久保留
+10. **pnc_msg 控制接口**: 新建独立 ROS2 消息包，定义 `TrajectoryPoint`（13字段：time/length/x/y/vx/vy/acc_x/acc_y/heading/curvature/pinch/jerk/reserved）和 `TrajPoints`（header + 10 个 sf_trajectory_* 业务 flags + TrajectoryPoint[40]）。`lattice_test_node` 新增 `/lattice_trajectory` publisher，每周期将截断后的最优轨迹 40 点均匀重采样输出。计算方式：(a) vx/vy = v × (cosθ, sinθ) — 切向速度转 GROUND 系；(b) acc_x/acc_y = a × (cosθ, sinθ) — 切向加速度转 GROUND 系；(c) curvature = κ；(d) pinch = dkappa = dκ/ds；(e) jerk = da/dt 三点中心差分。用于下游控制模块接入与白盒调试数据可视化
+23. **仿真独立化 (9.1)**: 新建 `lattice_simulator_node` 独立可执行文件，100Hz 增量运动 + TF 广播 map→base_footprint；提取 `scenario_manager.h/cpp` 管理场景配置，规划器和仿真器共用；`lattice_test_node` 删除 TF broadcast 和 init_scenario 方法，改为从 scenario_manager 加载场景、通过 tf2 Buffer 查询 map→base_footprint 获取车辆位姿
+24. **可视化增强 (9.3)**: 新增 URDF 车辆模型 (`urdf/lattice_car.urdf`) — 黄色底盘 3.0×1.6×1.5m + 4 个圆柱车轮；新增道路边界 Marker (`/lattice_test/road_boundaries`) — 左右白色边界线 + 黄色中线；RViz 升级 — RobotModel Display + TF Display + ThirdPersonFollower 相机 (35m)；Launch 文件添加 robot_state_publisher + joint_state_publisher + lattice_simulator_node
+25. **轨迹时间改为绝对时间**: `out.time = sim_time_ + pt.relative_time`（替代纯相对时间）。规划器累积 `sim_time_`，每条新轨迹的起点时间 = 当前 `sim_time_` + 轨迹点相对时间。仿真器基于 wall-clock 计算 `target_time = traj_t0_ + elapsed`，两者均按 1.0 仿真秒/墙上秒推进，保持同步。
+26. **仿真器重写 (100% 轨迹查表)**: 移除 30/70 运动模型混合（航位推算/轨迹查表），改为 100% 轨迹查表插值。首条轨迹到达前 freeze（`if (!first_traj_received_) return`）。首条轨迹位置 >50m 偏离 init 时判定为 DDS 残留消息拒绝。
+27. **RViz2 Marker 渲染规范**: (a) 静态 marker（道路边界、参考线）仅发布**一次**，`frame_locked=true`, `lifetime=Duration::max()`，禁止周期性重发——重发导致闪烁；(b) 每个 MarkerArray topic 首次发布时对每个 namespace 发送 DELETEALL 清除上一运行的 DDS 共享内存残留；(c) 道路边界 z=0.10 避免与轨迹线 Z-fighting；(d) 障碍物增加 DELETE 清理旧 ID 防止残影；(e) 绿色最优轨迹和 Path 均从 `timestep_`(0.1s) 开始 Evaluate，确保起点对齐车辆位置。
+28. **DDS 切换为 CycloneDDS**: 安装 `ros-humble-rmw-cyclonedds-cpp`，Launch 文件默认设置 `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`。从根本上解决 Fast-DDS 共享内存（`/dev/shm/fastrtps_*`）残留导致的 RViz 闪烁、轨迹残影和障碍物重影问题。CycloneDDS 在单机回环和大消息吞吐上表现更优。备用方案：`config/fastdds_no_shm.xml`（Fast-DDS 纯 UDPv4，禁用 SHM）。
+29. **候选轨迹上限从 50 降至 25**: 减少每帧 MarkerArray 消息大小，降低 RViz 渲染负载。
+30. **参考线 marker 改为一次性发布**: 从每帧通过 viz_pub_ 重发改为仅 frame 0 发布一次，`frame_locked=true`, `lifetime=max()`，消除 10Hz 重发引起的闪烁。
+31. **ALC 换道完成状态机**: `lattice_test_node.cpp` 新增 `alc_completed_flag_` 和 `alc_complete_debounce_counter_`。换道结束判定条件：横向误差 `< 0.20m`、航向误差 `< 0.03 rad`（通过 `PathMatcher::MatchToPath()` 获取参考线匹配点航向）、连续 5 帧防抖。完成后平移 `reference_line_` → 偏距归零 → 切回 LCC，符合量产标准逻辑。
+32. **障碍物 Marker 持久化**: 障碍物 CUBE 标记从每帧重发改为仅 frame 0 发布一次（`frame_locked=true`, `lifetime=Duration::max()`），与参考线和道路边界保持一致。消除 NUDGE 场景中因 10Hz 重发透明障碍物（α=0.5）导致的视觉闪烁，以及候选轨迹碰撞状态切换（cyan/orange）引起的连带闪烁。
+33. **Scenario 5: 4.2km S 弯高速赛道**: 新增 `init_scenario_5()`，从分段线性曲率剖面数值积分生成 4200m 连续 S 弯参考线。3 个弯道（500m/700m/1000m 半径）配合缓和曲线（线性 kappa 过渡），ds=0.5m，约 8401 个参考点。车辆起点 (0,0,heading=0)，LCC 默认模式，无障碍物。
+34. **交互式换道**: 新增 `/lattice_test/lane_change_cmd` 订阅（`std_msgs/Int8`, 1=左+3.75m, -1=右-3.75m）。`driving_mode_` 和 `target_lat_offset_` 从局部变量升级为成员变量，使 subscription 回调和 timer 回调共享状态。换道进行中拒绝新指令。完成后 `alc_completed_flag_` 不变，由 subscription 重置以支持反复换道。
+35. **ALC 换道完成改为法向量平移**: 从 `pt.set_y(pt.get_y() + target_d)` 升级为法向平移 `pt.x_ += target_d * (-sin(heading))`, `pt.y_ += target_d * cos(heading)`。弯道上参考线沿道路法向偏移，不再仅适用于直线。向后兼容（直线 heading=0 时等同于 y 平移）。完成后同时重发道路边界 markers。
+36. **道路边界渲染改为法向偏移**: `publish_road_boundaries()` 中 `make_line`/`make_dashed_line` 从 `rp.y_ + y_offset` 改为法向偏移。弯道上白色边线/黄色中线跟随曲率正确渲染。双车道显示条件扩展到 scenario 5。

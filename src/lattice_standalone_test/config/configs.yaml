@@ -5,7 +5,7 @@
 FLAGS_vehicle_width: 1.6
 FLAGS_vehicle_length: 3.0
 front_edge_to_center: 2.0
-back_edge_to_center: 1.0
+back_edge_to_center: 1.0  # 后悬长度
 FLAGS_default_reference_line_width: 4.0
 
 # 轨迹时间/空间参数
@@ -15,19 +15,19 @@ FLAGS_trajectory_space_resolution: 0.4
 FLAGS_polynomial_minimal_param: 0.01
 
 # 速度规划
-FLAGS_num_velocity_sample: 6
+FLAGS_num_velocity_sample: 6FLAGS_default_reference_line_width
 FLAGS_min_velocity_sample_gap: 1.0
 
 # 约束参数
 FLAGS_speed_lower_bound: -0.1
-FLAGS_speed_upper_bound: 40
-FLAGS_longitudinal_acceleration_lower_bound: -4.0
+FLAGS_speed_upper_bound: 110
+FLAGS_longitudinal_acceleration_lower_bound: -4.0 # 纵向加速度校验
 FLAGS_longitudinal_acceleration_upper_bound: 2.0
 FLAGS_comfort_acceleration_factor: 0.5
-FLAGS_longitudinal_jerk_lower_bound: -4.0
+FLAGS_longitudinal_jerk_lower_bound: -4.0  # 纵向急动度：加速度变化率
 FLAGS_longitudinal_jerk_upper_bound: 4.0
 FLAGS_kappa_bound: 2.0
-FLAGS_lateral_acceleration_bound: 10.0
+FLAGS_lateral_acceleration_bound: 10.0 # 横向加速度
 
 # 代价权重
 FLAGS_weight_target_speed: 1.0

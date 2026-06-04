@@ -1,81 +1,253 @@
 Panels:
   - Class: rviz_common/Displays
+    Help Height: 70
     Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 296
   - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
     Name: Views
+    Splitter Ratio: 0.5
+  - Class: lattice_standalone_test/LaneChange
+    Name: Lane Change
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.6
+    - Alpha: 0.6000000238418579
+      Cell Size: 1
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
+      Enabled: false
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
       Name: Grid
-      Plane Cell Count: 100
+      Normal Cell Count: 0
       Offset:
         X: 0
         Y: 0
         Z: 0
       Plane: XY
-    - Alpha: 0.7
+      Plane Cell Count: 100
+      Reference Frame: base_footprint
+      Value: false
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_fl:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_fr:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_rl:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_rr:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
+      Name: Ego Vehicle
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+        base_footprint:
+          Value: true
+        base_link:
+          Value: true
+        map:
+          Value: true
+        wheel_fl:
+          Value: true
+        wheel_fr:
+          Value: true
+        wheel_rl:
+          Value: true
+        wheel_rr:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: false
+      Tree:
+        map:
+          base_footprint:
+            base_link:
+              wheel_fl:
+                {}
+              wheel_fr:
+                {}
+              wheel_rl:
+                {}
+              wheel_rr:
+                {}
+      Update Interval: 0
+      Value: true
+    - Alpha: 0.6000000238418579
       Buffer Length: 1
       Class: rviz_default_plugins/Path
       Color: 0; 100; 255
-      Enabled: true
+      Enabled: false
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.07999999821186066
       Name: Reference Path
       Offset:
         X: 0
         Y: 0
         Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /lattice_test/reference_path
       Value: true
-    - Alpha: 1.0
+    - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
       Color: 0; 255; 0
       Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
       Name: Optimal Trajectory
       Offset:
         X: 0
         Y: 0
         Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /lattice_test/optimal_trajectory
       Value: true
-    - Alpha: 0.4
+    - Alpha: 0.4000000059604645
       Buffer Length: 1
       Class: rviz_default_plugins/Path
       Color: 128; 128; 128
       Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
       Name: Candidate Trajectories
       Offset:
         X: 0
         Y: 0
         Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /lattice_test/candidate_trajectories
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
+      Name: Road Boundaries
+      Namespaces:
+        road: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /lattice_test/road_boundaries
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
       Name: Visualization Markers
+      Namespaces:
+        candidates: true
+        mode_status: true
+        optimal: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /lattice_test/viz_markers
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Reference Line
+      Namespaces:
+        reference: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /lattice_test/ref_line
       Value: true
   Enabled: true
   Global Options:
@@ -88,18 +260,42 @@ Visualization Manager:
     - Class: rviz_default_plugins/Select
     - Class: rviz_default_plugins/FocusCamera
     - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/TopDownOrtho
-      Name: TopDownOrtho
-      Near Clip Distance: 0.1
-      Scale: 10
-      Target Frame: <Fixed Frame>
-      Value: TopDownOrtho (rviz_default_plugins)
-      X: 20
-      Y: 0
-    Saved: {}
+      Class: rviz_default_plugins/ThirdPersonFollower
+      Distance: 15.851390838623047
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: -0.6627607345581055
+        Y: -1.2070471048355103
+        Z: 9.5367431640625e-07
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.10000000149011612
+      Pitch: 0.33500009775161743
+      Target Frame: base_footprint
+      Value: ThirdPersonFollower (rviz_default_plugins)
+      Yaw: 3.114999294281006
+    Saved: ~
 Window Geometry:
+  Displays:
+    collapsed: false
   Height: 800
-  Width: 1200
+  Hide Left Dock: false
+  Hide Right Dock: false
+  Views:
+    collapsed: false
+  Width: 1470
+  X: 66
+  Y: 27

@@ -187,7 +187,7 @@ DiscretizedTrajectory LatticePlanner::LatticePlan(
                            driving_mode == DrivingMode::NUDGE ? "NUDGE" : "ALC")
             << std::endl;
 
-  // 与Apollo不同，我们的前探距离不使用lon_decision_horizon，因为我们的仿真的参考线不长
+  // 与Apollo不同，前探距离不使用lon_decision_horizon，因为我们的仿真的参考线不长
   auto ptr_path_time_graph = std::make_shared<PathTimeGraph>(obstacles, reference_points, init_s[0],
                                                              init_s[0] + 30, // 前瞻多少m lon_decision_horizon
                                                              0.0, Config_.FLAGS_trajectory_time_length, init_d);
@@ -238,7 +238,7 @@ DiscretizedTrajectory LatticePlanner::LatticePlan(
     {
       // check longitudinal and lateral acceleration
       // considering trajectory curvatures
-      auto result = constraintchecker_.ValidTrajectory(combined_trajectory);
+      auto result = constraintchecker_.ValidTrajectory(combined_trajectory); //动力学约束校验
       if (result != ConstraintChecker::Result::VALID)
       {
         constraint_valid = false;
@@ -246,7 +246,7 @@ DiscretizedTrajectory LatticePlanner::LatticePlan(
       else
       {
         // Get instance of collision checker and constraint checker
-        CollisionChecker collision_checker(obstacles, init_s[0], init_d[0], reference_points, ptr_path_time_graph);
+        CollisionChecker collision_checker(obstacles, init_s[0], init_d[0], reference_points, ptr_path_time_graph); //
         // 碰撞检测
         if (collision_checker.InCollision(combined_trajectory))
         {

@@ -1,0 +1,11 @@
+<library path="lane_change_panel">
+  <class
+    name="lattice_standalone_test/LaneChange"
+    type="lattice_standalone_test::LaneChangePanel"
+    base_class_type="rviz_common::Panel"
+  >
+    <description>
+      Lane Change Control Panel: two buttons (Left/Right) to trigger lane changes.
+    </description>
+  </class>
+</library>

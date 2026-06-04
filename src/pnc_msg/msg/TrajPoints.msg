@@ -1,0 +1,13 @@
+std_msgs/Header header
+
+uint32 sf_trajectory_cnt
+float32 sf_trajectory_time_stamp
+uint16 sf_trajectory_flag
+uint16 sf_trajectory_driving_lateral_flag
+uint16 sf_trajectory_driving_longitudinal_flag
+uint16 sf_trajectory_active_safety_lateral_flag
+uint16 sf_trajectory_active_safety_longitudinal_flag
+float32 sf_trajectory_front_vehicle_velx
+float32 sf_trajectory_front_vehicle_accx
+
+TrajectoryPoint[] trajectory_points
